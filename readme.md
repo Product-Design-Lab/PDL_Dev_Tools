@@ -95,25 +95,25 @@ When you run the command to create a new library using `dev_tools.py`, the scrip
 ### Windows Setup Example
 
 ```cmd
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py init_config
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py init_config
 Config file already exists
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py config name "Peter"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py config name "Peter"
 Config updated: name = Peter
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py config email "xutengl@outlook.com"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py config email "xutengl@outlook.com"
 Config updated: email = xutengl@outlook.com
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py config lib_path "..\libraries"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py config lib_path "..\libraries"
 Config updated: lib_path = ..\libraries
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py config github_token "your_github_token"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py config github_token "your_github_token"
 Config updated: github_token = your_github_token
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py config github_org "Product-Design-Lab"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py config github_org "Product-Design-Lab"
 Config updated: github_org = Product-Design-Lab
 
-C:\Users\xl\Documents\vysum_firmware\scripts>python dev_tools.py create_new_library "sample_lib"
+C:\Users\xl\Documents\vysum_firmware\PDL_Dev_Tools>python dev_tools.py create_new_library "sample_lib"
 Library created at ..\libraries\sample_lib
 ```
 
@@ -151,37 +151,37 @@ Library created at ..\libraries\sample_lib
 
 ```bash
 xl@XL-NUC MINGW64 ~/Documents/vysum_firmware (dev)
-$ cd scripts/
+$ cd PDL_Dev_Tools/
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py init_config
 Config file already exists
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py config name "Peter"
 Config updated: name = Peter
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py config email "xutengl@outlook.com"
 Config updated: email = xutengl@outlook.com
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py config lib_path "../libraries"
 Config updated: lib_path = ../libraries
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py config github_token "your_github_token"
 Config updated: github_token = your_github_token
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py config github_org "Product-Design-Lab"
 Config updated: github_org = Product-Design-Lab
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ python dev_tools.py create_new_library "sample_lib"
 Library created at ../libraries/sample_lib
 
-xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/scripts (dev)
+xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/PDL_Dev_Tools (dev)
 $ cd ../libraries/sample_lib/
 
 xl@XL-NUC MINGW64 ~/Documents/vysum_firmware/libraries/sample_lib (dev)
