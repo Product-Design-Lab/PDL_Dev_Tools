@@ -120,6 +120,10 @@ def initialize_git_repo(new_library_path):
     return True
 
 def create_remote_repo(name, github_token, github_org):
+    
+    # Ensure only the organization name is used
+    github_org = github_org.split('/')[-1] if github_org.startswith("http") else github_org
+    
     url = f"https://api.github.com/orgs/{github_org}/repos"
     headers = {
         "Authorization": f"token {github_token}",
