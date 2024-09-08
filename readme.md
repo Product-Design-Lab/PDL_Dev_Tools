@@ -242,3 +242,17 @@ The `tasks.json` file in your project allows you to automate various tasks relat
 
 By using these tasks, you can streamline the process of managing your Arduino libraries and configurations, making it easier to automate repetitive tasks and maintain consistency across your projects.
 
+## Using c_cpp_properties.json
+The c_cpp_properties.json file in your project is used to configure IntelliSense settings for C/C++ in Visual Studio Code. This file helps IntelliSense understand the include paths and definitions for your project, reducing squiggle lines for libraries and improving code suggestions.
+
+To use the c_cpp_properties.json configuration:
+
+1. **Copy c_cpp_properties.json**: Ensure that the c_cpp_properties.json file is located in the .vscode folder in your project directory. If it's not there, copy the file from the vscode_config_template folder:
+
+```bash
+cp vscode_config_template/c_cpp_properties.json .vscode/
+```
+
+2. **Open Command Palette**: Press Ctrl+Shift+P (Windows/Linux) or Cmd+Shift+P (MacOS) to open the Command Palette in Visual Studio Code.
+
+3. **Select IntelliSense Configuration**: Type C/C++: Edit Configurations (UI) and select it from the list. This opens the configuration UI where you can manage IntelliSense settings. Choose Configuration: If you have multiple configurations, select the one that matches your system (e.g., ubuntu, windows, or mac). This ensures that IntelliSense uses the correct paths and definitions for your operating system.

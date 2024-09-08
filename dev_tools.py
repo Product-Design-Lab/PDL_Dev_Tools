@@ -7,8 +7,11 @@ import subprocess
 import shutil
 import requests
 
+from json_merge import merge_json_files
+
 # Set up basic configuration for logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Determine the directory where the script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +25,24 @@ DEFAULT_CONFIG = {
     "github_org": "Product-Design-Lab"  # Add the organization name here
 }
 
+
 def init_config():
+
+    _init_vscode_config()
+    
+    _init_file_structure()
+
+    main_dir = os.path.join(os.getcwd(), 'main')
+    library_dir = os.path.join(os.getcwd(), 'library')
+
+    if not os.path.exists(main_dir):
+        os.makedirs(main_dir)
+        print(f"Created directory: {main_dir}")
+
+    if not os.path.exists(library_dir):
+        os.makedirs(library_dir)
+        print(f"Created directory: {library_dir}")
+
     if os.path.exists(CONFIG_FILENAME):
         logging.info("Config file already exists")
         return
@@ -34,9 +54,88 @@ def init_config():
     except IOError as e:
         logging.error(f"Failed to create config file: {e}")
 
+
+def _init_vscode_config():
+    # Define paths relative to the script directory
+    vscode_dir = os.path.join(script_dir, '..',
+                              '.vscode')  # .vscode at the same level as main
+    tasks_src = os.path.join(script_dir, 'vscode_config_template',
+                             'tasks.json')
+    cpp_properties_src = os.path.join(script_dir, 'vscode_config_template',
+                                      'c_cpp_properties.json')
+
+    # Ensure the .vscode directory exists
+    if not os.path.exists(vscode_dir):
+        os.makedirs(vscode_dir)
+        logging.info(f"Created .vscode directory at {vscode_dir}")
+
+    # Copy tasks.json if it does not exist
+    tasks_dest = os.path.join(vscode_dir, 'tasks.json')
+    try:
+        if not os.path.exists(tasks_dest) and os.path.exists(tasks_src):
+            shutil.copy(tasks_src, tasks_dest)
+            logging.info(f"Copied tasks.json to {tasks_dest}")
+        elif os.path.exists(tasks_dest):
+            merge_json_files(tasks_dest, tasks_src,
+                             tasks_dest)  # Merge new config into existing
+            logging.info(f"Merged tasks.json into {tasks_dest}")
+        else:
+            logging.error("tasks.json does not exist in the source directory.")
+    except Exception as e:
+        logging.error(f"Failed to handle tasks.json: {e}")
+
+    # Copy c_cpp_properties.json if it does not exist
+    cpp_properties_dest = os.path.join(vscode_dir, 'c_cpp_properties.json')
+    try:
+        if not os.path.exists(cpp_properties_dest) and os.path.exists(
+                cpp_properties_src):
+            shutil.copy(cpp_properties_src, cpp_properties_dest)
+            logging.info(
+                f"Copied c_cpp_properties.json to {cpp_properties_dest}")
+        elif os.path.exists(cpp_properties_dest):
+            merge_json_files(
+                cpp_properties_dest, cpp_properties_src,
+                cpp_properties_dest)  # Merge new config into existing
+            logging.info(
+                f"Merged c_cpp_properties.json into {cpp_properties_dest}")
+        else:
+            logging.error(
+                "c_cpp_properties.json does not exist in the source directory."
+            )
+    except Exception as e:
+        logging.error(f"Failed to handle c_cpp_properties.json: {e}")
+
+    # Optionally, check if both files were handled successfully
+    copied_tasks = os.path.exists(tasks_dest) or os.path.exists(tasks_src)
+    copied_cpp_properties = os.path.exists(
+        cpp_properties_dest) or os.path.exists(cpp_properties_src)
+
+    if copied_tasks and copied_cpp_properties:
+        logging.info(
+            "Both VS Code configuration files were handled successfully.")
+    else:
+        logging.error(
+            "One or both VS Code configuration files could not be handled.")
+
+def _init_file_structure():
+
+    main_dir = os.path.join(script_dir,"../", 'main')
+    library_dir = os.path.join(script_dir,"../" 'library')
+
+    # Create 'main' directory if it doesn't exist
+    if not os.path.exists(main_dir):
+        os.makedirs(main_dir)
+        print(f"Created directory: {main_dir}")
+
+    # Create 'library' directory if it doesn't exist
+    if not os.path.exists(library_dir):
+        os.makedirs(library_dir)
+        print(f"Created directory: {library_dir}")
+
 def _set_config(key, val):
     if not os.path.exists(CONFIG_FILENAME):
-        logging.error("Config file does not exist, creating default config file")
+        logging.error(
+            "Config file does not exist, creating default config file")
         init_config()
         return
 
@@ -56,6 +155,7 @@ def _set_config(key, val):
     except IOError as e:
         logging.error(f"Failed to write to the config file: {e}")
 
+
 def load_config():
     try:
         with open(CONFIG_FILENAME, "r") as f:
@@ -68,6 +168,7 @@ def load_config():
         logging.error("Config file is not valid JSON")
         return None
 
+
 def create_directories(new_library_path):
     try:
         os.makedirs(os.path.join(new_library_path, "src"))
@@ -77,17 +178,23 @@ def create_directories(new_library_path):
         return False
     return True
 
+
 def create_files(new_library_path, name, config):
     file_structure = {
-        os.path.join("src", f"{name}.h"): '#pragma once\n\n',
-        os.path.join("src", f"{name}.cpp"): f'#include "{name}.h"\n\n',
-        os.path.join("example", "demo", "demo.ino"): 
-            '#include <Arduino.h>\n#include <{0}.h>\n\nvoid setup() \n{{\n\n}}\nvoid loop() \n{{\n\n}}\n'.format(name),
-        "library.properties": 
-            f'name={name}\nversion=0.0.0\nauthor={config["name"]}\nmaintainer={config["name"]} <{config["email"]}>\n'
-            'sentence=Short description of the library\nparagraph=Longer description of the library\ncategory=\nurl=http://example.com\n',
-        "keywords.txt": f'{name} KEYWORD1\n',
-        "README.md": f'# {name}\n\n',
+        os.path.join("src", f"{name}.h"):
+        '#pragma once\n\n',
+        os.path.join("src", f"{name}.cpp"):
+        f'#include "{name}.h"\n\n',
+        os.path.join("example", "demo", "demo.ino"):
+        '#include <Arduino.h>\n#include <{0}.h>\n\nvoid setup() \n{{\n\n}}\nvoid loop() \n{{\n\n}}\n'
+        .format(name),
+        "library.properties":
+        f'name={name}\nversion=0.0.0\nauthor={config["name"]}\nmaintainer={config["name"]} <{config["email"]}>\n'
+        'sentence=Short description of the library\nparagraph=Longer description of the library\ncategory=\nurl=http://example.com\n',
+        "keywords.txt":
+        f'{name} KEYWORD1\n',
+        "README.md":
+        f'# {name}\n\n',
     }
 
     for file_path, content in file_structure.items():
@@ -100,7 +207,8 @@ def create_files(new_library_path, name, config):
 
     # Copy the LICENSE file
     try:
-        shutil.copyfile(os.path.join(script_dir, "LICENSE"), os.path.join(new_library_path, "LICENSE"))
+        shutil.copyfile(os.path.join(script_dir, "LICENSE"),
+                        os.path.join(new_library_path, "LICENSE"))
         logging.info("LICENSE file copied")
     except IOError as e:
         logging.error(f"Failed to copy LICENSE file: {e}")
@@ -108,31 +216,33 @@ def create_files(new_library_path, name, config):
 
     return True
 
+
 def initialize_git_repo(new_library_path):
     try:
         subprocess.run(["git", "init"], cwd=new_library_path, check=True)
         subprocess.run(["git", "add", "."], cwd=new_library_path, check=True)
-        subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=new_library_path, check=True)
+        subprocess.run(["git", "commit", "-m", "Initial commit"],
+                       cwd=new_library_path,
+                       check=True)
         logging.info("Initialized git repository")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to initialize git repository: {e}")
         return False
     return True
 
+
 def create_remote_repo(name, github_token, github_org):
-    
+
     # Ensure only the organization name is used
-    github_org = github_org.split('/')[-1] if github_org.startswith("http") else github_org
-    
+    github_org = github_org.split('/')[-1] if github_org.startswith(
+        "http") else github_org
+
     url = f"https://api.github.com/orgs/{github_org}/repos"
     headers = {
         "Authorization": f"token {github_token}",
         "Accept": "application/vnd.github.v3+json"
     }
-    data = {
-        "name": name,
-        "private": False
-    }
+    data = {"name": name, "private": False}
 
     response = requests.post(url, headers=headers, json=data)
 
@@ -144,25 +254,39 @@ def create_remote_repo(name, github_token, github_org):
         logging.error(f"Failed to create remote repository: {response.json()}")
         return None
 
+
 def push_to_remote(new_library_path, repo_url):
     try:
-        subprocess.run(["git", "remote", "add", "origin", repo_url], cwd=new_library_path, check=True)
-        subprocess.run(["git", "branch", "-M", "main"], cwd=new_library_path, check=True)
-        subprocess.run(["git", "push", "-u", "origin", "main"], cwd=new_library_path, check=True)
+        subprocess.run(["git", "remote", "add", "origin", repo_url],
+                       cwd=new_library_path,
+                       check=True)
+        subprocess.run(["git", "branch", "-M", "main"],
+                       cwd=new_library_path,
+                       check=True)
+        subprocess.run(["git", "push", "-u", "origin", "main"],
+                       cwd=new_library_path,
+                       check=True)
         logging.info("Pushed to remote repository")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to push to remote repository: {e}")
         return False
     return True
 
+
 def add_git_submodule(main_repo_path, repo_url, name):
     try:
-        subprocess.run(["git", "submodule", "add", repo_url, os.path.join("libraries", name)], cwd=main_repo_path, check=True)
+        subprocess.run([
+            "git", "submodule", "add", repo_url,
+            os.path.join("libraries", name)
+        ],
+                       cwd=main_repo_path,
+                       check=True)
         logging.info("Added as git submodule")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to add as git submodule: {e}")
         return False
     return True
+
 
 def create_new_library(name):
     if not isinstance(name, str):
@@ -204,7 +328,8 @@ def create_new_library(name):
     if not initialize_git_repo(new_library_path):
         return
 
-    repo_url = create_remote_repo(name, config["github_token"], config["github_org"])
+    repo_url = create_remote_repo(name, config["github_token"],
+                                  config["github_org"])
     if repo_url is None:
         return
 
@@ -217,31 +342,41 @@ def create_new_library(name):
 
     logging.info(f"Library created at {new_library_path}")
 
+
 def config_name(name):
     _set_config("name", name)
+
 
 def config_email(email):
     _set_config("email", email)
 
+
 def config_lib_path(path):
     _set_config("lib_path", path)
+
 
 def config_github_token(token):
     _set_config("github_token", token)
 
+
 def config_github_org(org):
     _set_config("github_org", org)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PDL Development Tools")
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("init_config", help="Initialize the config file")
-    library_parser = subparsers.add_parser("create_new_library", help="Initialize a new library")
+    library_parser = subparsers.add_parser("create_new_library",
+                                           help="Initialize a new library")
     library_parser.add_argument("name", help="Name of the library")
 
-    config_parser = subparsers.add_parser("config", help="Set a configuration value")
-    config_parser.add_argument("key", choices=["name", "email", "lib_path", "github_token", "github_org"])
+    config_parser = subparsers.add_parser("config",
+                                          help="Set a configuration value")
+    config_parser.add_argument(
+        "key",
+        choices=["name", "email", "lib_path", "github_token", "github_org"])
     config_parser.add_argument("value")
 
     args = parser.parse_args()
