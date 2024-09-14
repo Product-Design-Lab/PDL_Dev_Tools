@@ -1,367 +1,65 @@
 import argparse
-import json
 import os
-import sys
 import logging
-import subprocess
-import shutil
-import requests
+import tempfile
 
-from json_merge import merge_json_files
+import config
+import git_tools
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Determine the directory where the script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILENAME = os.path.join(script_dir, "config.json")
-
-DEFAULT_CONFIG = {
-    "name": "PDL",
-    "email": "name@example.com",
-    "lib_path": os.path.join("..", "libraries"),
-    "github_token": "your_github_token",  # Add your GitHub token here
-    "github_org": "Product-Design-Lab"  # Add the organization name here
-}
-
-
-def init_config():
-
-    _init_vscode_config()
-    
-    _init_file_structure()
-
-    main_dir = os.path.join(os.getcwd(), 'main')
-    library_dir = os.path.join(os.getcwd(), 'library')
-
-    if not os.path.exists(main_dir):
-        os.makedirs(main_dir)
-        print(f"Created directory: {main_dir}")
-
-    if not os.path.exists(library_dir):
-        os.makedirs(library_dir)
-        print(f"Created directory: {library_dir}")
-
-    if os.path.exists(CONFIG_FILENAME):
-        logging.info("Config file already exists")
-        return
-
-    try:
-        with open(CONFIG_FILENAME, "w") as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-        logging.info("Config file created")
-    except IOError as e:
-        logging.error(f"Failed to create config file: {e}")
-
-
-def _init_vscode_config():
-    # Define paths relative to the script directory
-    vscode_dir = os.path.join(script_dir, '..',
-                              '.vscode')  # .vscode at the same level as main
-    tasks_src = os.path.join(script_dir, 'vscode_config_template',
-                             'tasks.json')
-    cpp_properties_src = os.path.join(script_dir, 'vscode_config_template',
-                                      'c_cpp_properties.json')
-
-    # Ensure the .vscode directory exists
-    if not os.path.exists(vscode_dir):
-        os.makedirs(vscode_dir)
-        logging.info(f"Created .vscode directory at {vscode_dir}")
-
-    # Copy tasks.json if it does not exist
-    tasks_dest = os.path.join(vscode_dir, 'tasks.json')
-    try:
-        if not os.path.exists(tasks_dest) and os.path.exists(tasks_src):
-            shutil.copy(tasks_src, tasks_dest)
-            logging.info(f"Copied tasks.json to {tasks_dest}")
-        elif os.path.exists(tasks_dest):
-            merge_json_files(tasks_dest, tasks_src,
-                             tasks_dest)  # Merge new config into existing
-            logging.info(f"Merged tasks.json into {tasks_dest}")
-        else:
-            logging.error("tasks.json does not exist in the source directory.")
-    except Exception as e:
-        logging.error(f"Failed to handle tasks.json: {e}")
-
-    # Copy c_cpp_properties.json if it does not exist
-    cpp_properties_dest = os.path.join(vscode_dir, 'c_cpp_properties.json')
-    try:
-        if not os.path.exists(cpp_properties_dest) and os.path.exists(
-                cpp_properties_src):
-            shutil.copy(cpp_properties_src, cpp_properties_dest)
-            logging.info(
-                f"Copied c_cpp_properties.json to {cpp_properties_dest}")
-        elif os.path.exists(cpp_properties_dest):
-            merge_json_files(
-                cpp_properties_dest, cpp_properties_src,
-                cpp_properties_dest)  # Merge new config into existing
-            logging.info(
-                f"Merged c_cpp_properties.json into {cpp_properties_dest}")
-        else:
-            logging.error(
-                "c_cpp_properties.json does not exist in the source directory."
-            )
-    except Exception as e:
-        logging.error(f"Failed to handle c_cpp_properties.json: {e}")
-
-    # Optionally, check if both files were handled successfully
-    copied_tasks = os.path.exists(tasks_dest) or os.path.exists(tasks_src)
-    copied_cpp_properties = os.path.exists(
-        cpp_properties_dest) or os.path.exists(cpp_properties_src)
-
-    if copied_tasks and copied_cpp_properties:
-        logging.info(
-            "Both VS Code configuration files were handled successfully.")
-    else:
-        logging.error(
-            "One or both VS Code configuration files could not be handled.")
-
-def _init_file_structure():
-
-    main_dir = os.path.join(script_dir,"../", 'main')
-    library_dir = os.path.join(script_dir,"../" 'library')
-
-    # Create 'main' directory if it doesn't exist
-    if not os.path.exists(main_dir):
-        os.makedirs(main_dir)
-        print(f"Created directory: {main_dir}")
-
-    # Create 'library' directory if it doesn't exist
-    if not os.path.exists(library_dir):
-        os.makedirs(library_dir)
-        print(f"Created directory: {library_dir}")
-
-def _set_config(key, val):
-    if not os.path.exists(CONFIG_FILENAME):
-        logging.error(
-            "Config file does not exist, creating default config file")
-        init_config()
-        return
-
-    try:
-        with open(CONFIG_FILENAME, "r") as f:
-            config = json.load(f)
-    except (IOError, json.JSONDecodeError) as e:
-        logging.error(f"Failed to read the config file: {e}")
-        return
-
-    config[key] = val
-
-    try:
-        with open(CONFIG_FILENAME, "w") as f:
-            json.dump(config, f, indent=4)
-        logging.info(f"Config updated: {key} = {val}")
-    except IOError as e:
-        logging.error(f"Failed to write to the config file: {e}")
-
-
-def load_config():
-    try:
-        with open(CONFIG_FILENAME, "r") as f:
-            config = json.load(f)
-        return config
-    except FileNotFoundError:
-        logging.error("Config file does not exist")
-        return None
-    except json.JSONDecodeError:
-        logging.error("Config file is not valid JSON")
-        return None
-
-
-def create_directories(new_library_path):
-    try:
-        os.makedirs(os.path.join(new_library_path, "src"))
-        os.makedirs(os.path.join(new_library_path, "example", "demo"))
-    except OSError as e:
-        logging.error(f"Failed to create directories: {e}")
-        return False
-    return True
-
-
-def create_files(new_library_path, name, config):
-    file_structure = {
-        os.path.join("src", f"{name}.h"):
-        '#pragma once\n\n',
-        os.path.join("src", f"{name}.cpp"):
-        f'#include "{name}.h"\n\n',
-        os.path.join("example", "demo", "demo.ino"):
-        '#include <Arduino.h>\n#include <{0}.h>\n\nvoid setup() \n{{\n\n}}\nvoid loop() \n{{\n\n}}\n'
-        .format(name),
-        "library.properties":
-        f'name={name}\nversion=0.0.0\nauthor={config["name"]}\nmaintainer={config["name"]} <{config["email"]}>\n'
-        'sentence=Short description of the library\nparagraph=Longer description of the library\ncategory=\nurl=http://example.com\n',
-        "keywords.txt":
-        f'{name} KEYWORD1\n',
-        "README.md":
-        f'# {name}\n\n',
-    }
-
-    for file_path, content in file_structure.items():
-        try:
-            with open(os.path.join(new_library_path, file_path), "w") as f:
-                f.write(content)
-        except IOError as e:
-            logging.error(f"Failed to write file {file_path}: {e}")
-            return False
-
-    # Copy the LICENSE file
-    try:
-        shutil.copyfile(os.path.join(script_dir, "LICENSE"),
-                        os.path.join(new_library_path, "LICENSE"))
-        logging.info("LICENSE file copied")
-    except IOError as e:
-        logging.error(f"Failed to copy LICENSE file: {e}")
-        return False
-
-    return True
-
-
-def initialize_git_repo(new_library_path):
-    try:
-        subprocess.run(["git", "init"], cwd=new_library_path, check=True)
-        subprocess.run(["git", "add", "."], cwd=new_library_path, check=True)
-        subprocess.run(["git", "commit", "-m", "Initial commit"],
-                       cwd=new_library_path,
-                       check=True)
-        logging.info("Initialized git repository")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to initialize git repository: {e}")
-        return False
-    return True
-
-
-def create_remote_repo(name, github_token, github_org):
-
-    # Ensure only the organization name is used
-    github_org = github_org.split('/')[-1] if github_org.startswith(
-        "http") else github_org
-
-    url = f"https://api.github.com/orgs/{github_org}/repos"
-    headers = {
-        "Authorization": f"token {github_token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    data = {"name": name, "private": False}
-
-    response = requests.post(url, headers=headers, json=data)
-
-    if response.status_code == 201:
-        repo_url = response.json()["clone_url"]
-        logging.info(f"Created remote repository: {repo_url}")
-        return repo_url
-    else:
-        logging.error(f"Failed to create remote repository: {response.json()}")
-        return None
-
-
-def push_to_remote(new_library_path, repo_url):
-    try:
-        subprocess.run(["git", "remote", "add", "origin", repo_url],
-                       cwd=new_library_path,
-                       check=True)
-        subprocess.run(["git", "branch", "-M", "main"],
-                       cwd=new_library_path,
-                       check=True)
-        subprocess.run(["git", "push", "-u", "origin", "main"],
-                       cwd=new_library_path,
-                       check=True)
-        logging.info("Pushed to remote repository")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to push to remote repository: {e}")
-        return False
-    return True
-
-
-def add_git_submodule(main_repo_path, repo_url, name):
-    try:
-        subprocess.run([
-            "git", "submodule", "add", repo_url,
-            os.path.join("libraries", name)
-        ],
-                       cwd=main_repo_path,
-                       check=True)
-        logging.info("Added as git submodule")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to add as git submodule: {e}")
-        return False
-    return True
-
 
 def create_new_library(name):
     if not isinstance(name, str):
         logging.error("Library name must be a string")
         return
 
-    config = load_config()
-    if config is None:
+    config_data = config.load_config()
+    if config_data is None:
         return
 
-    if "lib_path" not in config:
-        logging.error("lib_path not set in config")
-        return
+    required_keys = ["lib_path", "github_token", "github_org"]
+    for key in required_keys:
+        if key not in config_data:
+            logging.error(f"{key} not set in config")
+            return
 
-    if "github_token" not in config:
-        logging.error("github_token not set in config")
-        return
+    # Create a temporary directory to avoid conflict with existing structure
+    with tempfile.TemporaryDirectory() as temp_dir:
+        logging.info(f"Using temporary directory {temp_dir} for library creation")
 
-    if "github_org" not in config:
-        logging.error("github_org not set in config")
-        return
+        new_library_path = os.path.join(temp_dir, name)
 
-    lib_path = config["lib_path"]
-    if not os.path.isabs(lib_path):
-        lib_path = os.path.normpath(os.path.join(script_dir, lib_path))
+        # Create the necessary directories inside the temp folder
+        if not git_tools.create_directories(new_library_path):
+            return
 
-    new_library_path = os.path.join(lib_path, name)
+        # Create files for the new library
+        if not git_tools.create_files(new_library_path, name, config_data, script_dir):
+            return
 
-    if os.path.exists(new_library_path):
-        logging.error("Library with the same name already exists")
-        return
+        # Initialize a Git repository inside the temporary directory
+        if not git_tools.initialize_git_repo(new_library_path):
+            return
 
-    if not create_directories(new_library_path):
-        return
+        # Create a remote GitHub repository and get its URL
+        repo_url = git_tools.create_remote_repo(name, config_data["github_token"], config_data["github_org"])
+        if repo_url is None:
+            return
 
-    if not create_files(new_library_path, name, config):
-        return
+        # Push the repository from the temp directory to the remote
+        if not git_tools.push_to_remote(new_library_path, repo_url):
+            return
 
-    if not initialize_git_repo(new_library_path):
-        return
+        # Add the repository as a submodule to the main repository
+        main_repo_path = os.path.normpath(os.path.join(script_dir, ".."))
+        if not git_tools.add_git_submodule(main_repo_path, repo_url, name):
+            return
 
-    repo_url = create_remote_repo(name, config["github_token"],
-                                  config["github_org"])
-    if repo_url is None:
-        return
-
-    if not push_to_remote(new_library_path, repo_url):
-        return
-
-    main_repo_path = os.path.normpath(os.path.join(script_dir, ".."))
-    if not add_git_submodule(main_repo_path, repo_url, name):
-        return
-
-    logging.info(f"Library created at {new_library_path}")
-
-
-def config_name(name):
-    _set_config("name", name)
-
-
-def config_email(email):
-    _set_config("email", email)
-
-
-def config_lib_path(path):
-    _set_config("lib_path", path)
-
-
-def config_github_token(token):
-    _set_config("github_token", token)
-
-
-def config_github_org(org):
-    _set_config("github_org", org)
-
+        logging.info(f"Library created and pushed to {repo_url}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PDL Development Tools")
@@ -382,19 +80,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == "init_config":
-        init_config()
+        config.init_config()
     elif args.command == "create_new_library":
         create_new_library(args.name)
     elif args.command == "config":
         if args.key == "name":
-            config_name(args.value)
+            config.config_name(args.value)
         elif args.key == "email":
-            config_email(args.value)
+            config.config_email(args.value)
         elif args.key == "lib_path":
-            config_lib_path(args.value)
+            config.config_lib_path(args.value)
         elif args.key == "github_token":
-            config_github_token(args.value)
+            config.config_github_token(args.value)
         elif args.key == "github_org":
-            config_github_org(args.value)
+            config.config_github_org(args.value)
     else:
         parser.print_help()
